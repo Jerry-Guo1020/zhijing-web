@@ -8,7 +8,7 @@
     </PageHeader>
 
     <section class="grid gap-5 xl:grid-cols-[360px_1fr]">
-      <aside class="space-y-4">
+      <aside v-if="wrongBooks.length" class="space-y-4">
         <button
           v-for="book in wrongBooks"
           :key="book.packId"
@@ -40,12 +40,18 @@
           </div>
         </button>
       </aside>
+      <aside v-else class="rounded-lg border border-dashed border-[#b8cfc0] bg-[#f6f8f5] p-8 text-center">
+        <NotebookPen class="mx-auto h-8 w-8 text-[#1f7a5a]" />
+        <p class="mt-3 font-semibold text-[#1f2a24]">暂无错题本</p>
+        <p class="mt-1 text-sm text-[#66736b]">创建学习包并完成练习后，错题会自动沉淀到这里。</p>
+        <RouterLink class="mt-4 inline-flex h-10 items-center justify-center rounded-lg bg-white px-4 text-sm font-semibold text-[#1f7a5a]" to="/packs/new">新建学习包</RouterLink>
+      </aside>
 
       <section class="grid gap-5 lg:grid-cols-[1fr_360px]">
         <div class="rounded-lg border border-[#dce4dd] bg-white p-5">
           <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 class="text-lg font-bold text-[#1f2a24]">{{ selectedBook?.packTitle }}错题详情</h2>
+              <h2 class="text-lg font-bold text-[#1f2a24]">{{ selectedBook ? `${selectedBook.packTitle}错题详情` : '错题详情' }}</h2>
               <p class="mt-1 text-sm text-[#66736b]">先看错因，再进入重做或相似题训练。</p>
             </div>
             <div class="flex rounded-lg border border-[#dce4dd] bg-[#f6f8f5] p-1 text-sm">
@@ -63,12 +69,12 @@
             >
               <div class="flex items-start justify-between gap-3">
                 <div>
-                  <p class="font-semibold text-[#1f2a24]">{{ question.title }}</p>
-                  <p class="mt-1 text-sm text-[#66736b]">{{ question.chapter }} · 最近错误 {{ question.lastWrongAt }}</p>
+                  <p class="font-semibold text-[#1f2a24]">{{ questionTitle(question) }}</p>
+                  <p class="mt-1 text-sm text-[#66736b]">{{ question.chapter || question.chapterId || '未关联章节' }} · 最近错误 {{ formatDate(question.lastWrongAt || question.updatedAt) }}</p>
                 </div>
                 <span class="rounded-full px-2 py-1 text-xs font-semibold" :class="isMastered(question.status) ? 'bg-[#e6f5ed] text-[#2f855a]' : 'bg-[#fff4e4] text-[#b7791f]'">{{ statusText(question.status) }}</span>
               </div>
-              <p class="mt-3 rounded-lg bg-[#f6f8f5] px-3 py-3 text-sm leading-6 text-[#1f2a24]">错因：{{ question.reason || question.wrongReason }}</p>
+              <p class="mt-3 rounded-lg bg-[#f6f8f5] px-3 py-3 text-sm leading-6 text-[#1f2a24]">错因：{{ question.reason || question.wrongReason || '暂无错因记录' }}</p>
               <div class="mt-3 flex flex-wrap gap-2">
                 <RouterLink class="inline-flex h-9 items-center gap-2 rounded-lg border border-[#dce4dd] px-3 text-sm font-semibold text-[#1f2a24] hover:bg-[#eef4ef]" :to="`/wrong-book/${question.id}`">
                   <Eye class="h-4 w-4" />
@@ -111,11 +117,11 @@ import { RouterLink } from 'vue-router'
 import { Eye, NotebookPen, RefreshCcw } from '@lucide/vue'
 import { api } from '../../api/client'
 import PageHeader from '../../components/common/PageHeader.vue'
-import { mockPacks, mockWrongQuestions } from '../../data/mock'
 
-const wrongs = ref<any[]>(mockWrongQuestions)
-const selectedPackId = ref(mockWrongQuestions[0]?.packId ?? '')
-const selectedWrongId = ref(mockWrongQuestions[0]?.id ?? '')
+const wrongs = ref<any[]>([])
+const packs = ref<any[]>([])
+const selectedPackId = ref('')
+const selectedWrongId = ref('')
 const activeTab = ref('全部')
 const tabs = ['全部', '待复盘', '已掌握']
 
@@ -125,9 +131,19 @@ const statusText = (status: string) => {
   return '待复盘'
 }
 const isMastered = (status: string) => statusText(status) === '已掌握'
+const questionTitle = (question: any) => question.title || question.stem || `错题 ${String(question.id ?? '').slice(0, 8)}`
+const formatDate = (value?: string) => value ? new Date(value).toLocaleDateString() : '暂无记录'
 
 const wrongBooks = computed(() => {
-  return mockPacks.map((pack) => {
+  const packSource = packs.value.length
+    ? packs.value
+    : wrongs.value.map((item) => ({
+        id: item.packId,
+        title: item.pack || item.packTitle || '未命名学习包',
+        subjectName: item.subjectName || '学习包',
+      })).filter((item, index, arr) => item.id && arr.findIndex((next) => next.id === item.id) === index)
+
+  return packSource.map((pack) => {
     const questions = wrongs.value.filter((item) => (item.packId ?? item.pack_id) === pack.id || item.pack === pack.title)
     return {
       packId: pack.id,
@@ -145,7 +161,7 @@ const selectedBook = computed(() => wrongBooks.value.find((book) => book.packId 
 const selectedQuestions = computed(() => wrongs.value.filter((item) => item.packId === selectedBook.value?.packId || item.pack === selectedBook.value?.packTitle))
 const filteredQuestions = computed(() => selectedQuestions.value.filter((item) => activeTab.value === '全部' || statusText(item.status) === activeTab.value))
 const selectedWrong = computed(() => wrongs.value.find((item) => item.id === selectedWrongId.value) ?? filteredQuestions.value[0])
-const redoLink = computed(() => selectedWrong.value ? `/packs/${selectedWrong.value.packId}/practice?source=wrong-book&wrongId=${selectedWrong.value.id}` : '/packs/pack-english/practice')
+const redoLink = computed(() => selectedWrong.value ? `/packs/${selectedWrong.value.packId}/practice?source=wrong-book&wrongId=${selectedWrong.value.id}` : (packs.value[0]?.id ? `/packs/${packs.value[0].id}/practice` : '/packs/new'))
 
 watch(selectedPackId, () => {
   selectedWrongId.value = selectedQuestions.value[0]?.id ?? ''
@@ -153,12 +169,14 @@ watch(selectedPackId, () => {
 
 onMounted(async () => {
   try {
-    const data = await api.getWrongBook()
-    wrongs.value = data.length ? data : mockWrongQuestions
-    selectedPackId.value = wrongs.value[0]?.packId ?? mockWrongQuestions[0].packId
-    selectedWrongId.value = wrongs.value[0]?.id ?? mockWrongQuestions[0].id
+    const [packData, wrongData] = await Promise.all([api.getPacks(), api.getWrongBook()])
+    packs.value = packData
+    wrongs.value = wrongData
+    selectedPackId.value = wrongs.value[0]?.packId ?? packs.value[0]?.id ?? ''
+    selectedWrongId.value = wrongs.value[0]?.id ?? ''
   } catch {
-    wrongs.value = mockWrongQuestions
+    packs.value = []
+    wrongs.value = []
   }
 })
 </script>

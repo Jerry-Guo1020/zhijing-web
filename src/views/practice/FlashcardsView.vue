@@ -8,7 +8,7 @@
     </PageHeader>
 
     <section class="mb-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-      <div class="rounded-lg border border-[#dce4dd] bg-white p-5">
+      <div v-if="activeWord" class="rounded-lg border border-[#dce4dd] bg-white p-5">
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p class="inline-flex rounded-full border-[2px] border-[#2d3748] bg-[#add8e6] px-3 py-1 text-xs font-black text-[#2d3748]">单词记忆卡</p>
@@ -42,10 +42,19 @@
           </button>
         </div>
       </div>
+      <div v-else class="rounded-lg border border-dashed border-[#b8cfc0] bg-[#f6f8f5] p-10 text-center">
+        <Layers class="mx-auto h-8 w-8 text-[#1f7a5a]" />
+        <p class="mt-3 font-semibold text-[#1f2a24]">暂无记忆卡片</p>
+        <p class="mt-1 text-sm text-[#66736b]">生成或手动创建卡片后，这里才会出现复习内容。</p>
+        <button class="mt-4 inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-[#1f7a5a]" type="button" @click="createOpen = true">
+          <Plus class="h-4 w-4" />
+          新建卡片
+        </button>
+      </div>
 
       <aside class="rounded-lg border border-[#dce4dd] bg-[#eef4ef] p-5">
         <h2 class="text-lg font-bold text-[#1f2a24]">今日单词</h2>
-        <div class="mt-4 space-y-3">
+        <div v-if="wordCards.length" class="mt-4 space-y-3">
           <button
             v-for="(word, index) in wordCards"
             :key="word.id"
@@ -58,19 +67,20 @@
             <span class="text-xs">{{ word.status }}</span>
           </button>
         </div>
+        <p v-else class="mt-4 rounded-lg bg-white px-4 py-3 text-sm text-[#66736b]">暂无今日待复习卡片</p>
       </aside>
     </section>
 
-    <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <section v-if="cards.length" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       <article v-for="card in cards" :key="card.id" class="rounded-lg border border-[#dce4dd] bg-white p-5">
         <div class="flex items-center justify-between">
-          <span class="rounded-full bg-[#eef4ef] px-2 py-1 text-xs text-[#1f7a5a]">{{ card.level }}</span>
+          <span class="rounded-full bg-[#eef4ef] px-2 py-1 text-xs text-[#1f7a5a]">{{ masteryText(card.masteryLevel) }}</span>
           <Layers class="h-5 w-5 text-[#66736b]" />
         </div>
-        <h2 class="mt-5 text-lg font-bold text-[#1f2a24]">{{ card.front }}</h2>
-        <p class="mt-4 rounded-lg bg-[#f6f8f5] p-4 text-sm leading-6 text-[#66736b]">{{ card.back }}</p>
+        <h2 class="mt-5 text-lg font-bold text-[#1f2a24]">{{ card.frontText || card.front }}</h2>
+        <p class="mt-4 rounded-lg bg-[#f6f8f5] p-4 text-sm leading-6 text-[#66736b]">{{ card.backText || card.back }}</p>
         <div class="mt-5 grid grid-cols-3 gap-2">
-          <button v-for="level in levels" :key="level" class="rounded-lg border border-[#dce4dd] py-2 text-xs font-medium text-[#66736b] hover:bg-[#eef4ef]" type="button" @click="reviewedCount += 1">{{ level }}</button>
+          <button v-for="level in levels" :key="level.label" class="rounded-lg border border-[#dce4dd] py-2 text-xs font-medium text-[#66736b] hover:bg-[#eef4ef]" type="button" @click="review(card, level.rating)">{{ level.label }}</button>
         </div>
       </article>
     </section>
@@ -130,7 +140,7 @@
         </template>
         <div class="pro-field">
           <span class="pro-label">所属学习包</span>
-          <input class="pro-input" value="考研英语阅读精读" readonly />
+          <input class="pro-input" :value="packTitle" readonly />
         </div>
         <div class="pro-field">
           <span class="pro-label">所属章节</span>
@@ -165,19 +175,19 @@
       <div class="grid gap-3 sm:grid-cols-2">
         <div class="rounded-[8px] border-[3px] border-[#2d3748] bg-white p-4">
           <p class="text-xs font-black text-[#64748b]">复习卡片数</p>
-          <p class="mt-2 text-2xl font-black text-[#2d3748]">{{ Math.max(reviewedCount, cards.length) }}</p>
+        <p class="mt-2 text-2xl font-black text-[#2d3748]">{{ reviewedCount }}</p>
         </div>
         <div class="rounded-[8px] border-[3px] border-[#2d3748] bg-[#f0fff0] p-4">
           <p class="text-xs font-black text-[#64748b]">已掌握数</p>
-          <p class="mt-2 text-2xl font-black text-[#22c55e]">8</p>
+          <p class="mt-2 text-2xl font-black text-[#22c55e]">{{ masteredCount }}</p>
         </div>
         <div class="rounded-[8px] border-[3px] border-[#2d3748] bg-[#fff9f2] p-4">
           <p class="text-xs font-black text-[#64748b]">模糊数</p>
-          <p class="mt-2 text-2xl font-black text-[#b7791f]">3</p>
+          <p class="mt-2 text-2xl font-black text-[#b7791f]">{{ vagueCount }}</p>
         </div>
         <div class="rounded-[8px] border-[3px] border-[#2d3748] bg-[#fff0ee] p-4">
           <p class="text-xs font-black text-[#64748b]">不认识数</p>
-          <p class="mt-2 text-2xl font-black text-[#c44b3f]">1</p>
+          <p class="mt-2 text-2xl font-black text-[#c44b3f]">{{ unknownCount }}</p>
         </div>
       </div>
       <div class="pro-panel mt-4">
@@ -200,91 +210,96 @@ import { CheckCircle2, Eye, Layers, Plus, RotateCcw } from '@lucide/vue'
 import { api } from '../../api/client'
 import PageHeader from '../../components/common/PageHeader.vue'
 import ProModal from '../../components/common/ProModal.vue'
-import { mockFlashcards } from '../../data/mock'
 
 const route = useRoute()
 const packId = computed(() => String(route.params.id))
-const cards = ref<any[]>(mockFlashcards)
-const levels = ['忘记', '模糊', '熟悉']
+const cards = ref<any[]>([])
+const packTitle = ref('当前学习包')
+const levels = [
+  { label: '忘记', rating: 'unknown' },
+  { label: '模糊', rating: 'vague' },
+  { label: '熟悉', rating: 'remembered' },
+]
 const createOpen = ref(false)
 const reviewResultOpen = ref(false)
 const reviewedCount = ref(0)
 const activeWordIndex = ref(0)
 const wordRevealed = ref(false)
-const wordCards = ref([
-  {
-    id: 'word-1',
-    word: 'context',
-    pronunciation: '/ˈkɒntekst/',
-    partOfSpeech: 'n.',
-    meaning: '语境；背景；上下文',
-    example: 'AI can answer better when it has enough context.',
-    translation: '当 AI 拥有足够上下文时，回答会更准确。',
-    status: '待复习',
-  },
-  {
-    id: 'word-2',
-    word: 'derive',
-    pronunciation: '/dɪˈraɪv/',
-    partOfSpeech: 'v.',
-    meaning: '获得；源于；推导出',
-    example: 'The formula is derived from the definition of a derivative.',
-    translation: '这个公式由导数定义推导而来。',
-    status: '新词',
-  },
-  {
-    id: 'word-3',
-    word: 'contrast',
-    pronunciation: '/ˈkɒntrɑːst/',
-    partOfSpeech: 'n./v.',
-    meaning: '对比；形成对照',
-    example: 'The author uses contrast to make the main idea clearer.',
-    translation: '作者使用对比让主旨更清楚。',
-    status: '熟悉',
-  },
-])
 const cardForm = ref({
-  type: '单词',
-  front: 'context',
-  back: '语境；背景；上下文',
-  pronunciation: '/ˈkɒntekst/',
-  partOfSpeech: 'n.',
-  example: 'AI can answer better when it has enough context.',
-  chapter: '第一章 基础概念',
-  tags: '英语,单词,阅读',
-  source: '阅读材料中出现 context 时，通常指作者观点所在的上下文语境。',
+  type: '自定义',
+  front: '',
+  back: '',
+  pronunciation: '',
+  partOfSpeech: '',
+  example: '',
+  chapter: '',
+  tags: '',
+  source: '',
 })
-const activeWord = computed(() => wordCards.value[activeWordIndex.value])
+const wordCards = computed(() => cards.value.map((card) => ({
+  id: card.id,
+  word: card.frontText || card.front,
+  pronunciation: card.pronunciation || '',
+  partOfSpeech: card.type || '卡片',
+  meaning: card.backText || card.back,
+  example: card.sourceExcerpt || card.example || '',
+  translation: card.backText || card.back,
+  status: masteryText(card.masteryLevel),
+})))
+const activeWord = computed(() => wordCards.value[activeWordIndex.value] ?? null)
+const masteredCount = computed(() => cards.value.filter((card) => card.masteryLevel === 'mastered').length)
+const vagueCount = computed(() => cards.value.filter((card) => card.masteryLevel === 'vague').length)
+const unknownCount = computed(() => cards.value.filter((card) => !card.masteryLevel || card.masteryLevel === 'new').length)
+const masteryText = (level?: string) => {
+  if (level === 'mastered') return '已掌握'
+  if (level === 'familiar') return '熟悉'
+  if (level === 'vague') return '模糊'
+  return '新卡'
+}
+const flashcardType = (label: string) => {
+  const map: Record<string, string> = {
+    单词: 'word',
+    术语: 'term',
+    概念: 'concept',
+    定义: 'definition',
+    自定义: 'custom',
+  }
+  return map[label] ?? 'custom'
+}
 
 onMounted(async () => {
   try {
-    const data = await api.getFlashcards(packId.value)
-    cards.value = data.length ? data : mockFlashcards
+    const [data, detail] = await Promise.all([
+      api.getFlashcards(packId.value),
+      api.getPackDetail(packId.value).catch(() => null),
+    ])
+    cards.value = data
+    packTitle.value = detail?.pack?.title ?? '当前学习包'
   } catch {
-    cards.value = mockFlashcards
+    cards.value = []
   }
 })
 
-const saveCard = () => {
-  cards.value = [{ id: `card-${Date.now()}`, front: cardForm.value.front, back: cardForm.value.back, level: '新卡' }, ...cards.value]
-  if (cardForm.value.type === '单词') {
-    wordCards.value = [
-      {
-        id: `word-${Date.now()}`,
-        word: cardForm.value.front,
-        pronunciation: cardForm.value.pronunciation,
-        partOfSpeech: cardForm.value.partOfSpeech,
-        meaning: cardForm.value.back,
-        example: cardForm.value.example || 'Add this word to your daily reading review.',
-        translation: cardForm.value.back,
-        status: '新词',
-      },
-      ...wordCards.value,
-    ]
+const saveCard = async () => {
+  if (!cardForm.value.front.trim() || !cardForm.value.back.trim()) return
+  try {
+    const card = await api.createFlashcard({
+      packId: packId.value,
+      type: flashcardType(cardForm.value.type),
+      frontText: cardForm.value.front,
+      backText: cardForm.value.back,
+    })
+    cards.value = [card, ...cards.value]
     activeWordIndex.value = 0
     wordRevealed.value = false
+    cardForm.value.front = ''
+    cardForm.value.back = ''
+    cardForm.value.example = ''
+    cardForm.value.source = ''
+    createOpen.value = false
+  } catch (err) {
+    console.error(err)
   }
-  createOpen.value = false
 }
 
 const selectWord = (index: number) => {
@@ -292,11 +307,23 @@ const selectWord = (index: number) => {
   wordRevealed.value = false
 }
 
-const nextWord = (status: 'again' | 'known') => {
-  wordCards.value[activeWordIndex.value].status = status === 'known' ? '已认识' : '再复习'
+const nextWord = async (status: 'again' | 'known') => {
+  const card = cards.value[activeWordIndex.value]
+  if (card) {
+    await review(card, status === 'known' ? 'mastered' : 'unknown')
+  }
   activeWordIndex.value = (activeWordIndex.value + 1) % wordCards.value.length
   wordRevealed.value = false
+}
+
+const review = async (card: any, rating: string) => {
   reviewedCount.value += 1
+  try {
+    const updated = await api.reviewFlashcard(card.id, rating)
+    Object.assign(card, updated ?? {})
+  } catch (err) {
+    console.error(err)
+  }
 }
 </script>
 

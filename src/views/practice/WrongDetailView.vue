@@ -229,11 +229,27 @@ import { CheckCircle2, Layers, MessagesSquare, RefreshCcw, Sparkles } from '@luc
 import { api } from '../../api/client'
 import PageHeader from '../../components/common/PageHeader.vue'
 import ProModal from '../../components/common/ProModal.vue'
-import { mockWrongQuestions } from '../../data/mock'
 
 const route = useRoute()
 const letters = ['A', 'B', 'C', 'D']
-const wrong = ref<any>(mockWrongQuestions.find((item) => item.id === route.params.id) ?? mockWrongQuestions[0])
+const emptyWrong = () => ({
+  id: '',
+  packId: '',
+  pack: '',
+  chapter: '',
+  wrongCount: 0,
+  title: '错题不存在',
+  stem: '没有找到这道错题。',
+  options: [],
+  userAnswer: '-',
+  correctAnswer: '-',
+  lastWrongAt: '-',
+  aiReview: '暂无错因分析。',
+  knowledgePoints: [],
+  reason: '',
+  status: '',
+})
+const wrong = ref<any>(emptyWrong())
 const answer = ref('')
 const result = ref('')
 const resultType = ref<'success' | 'error'>('success')
@@ -243,10 +259,10 @@ const shareOpen = ref(false)
 const similarForm = ref({ count: 3, difficulty: '同等难度', variant: '同知识点换场景' })
 const shareForm = ref({
   type: '错题求助',
-  title: `求助：${wrong.value.title}`,
-  content: `我在「${wrong.value.pack}」里反复做错这题，错因是：${wrong.value.reason}。想请大家帮我看看复盘思路是否准确。`,
+  title: '',
+  content: '',
 })
-const redoLink = computed(() => `/packs/${wrong.value.packId}/practice?source=wrong-book&wrongId=${wrong.value.id}`)
+const redoLink = computed(() => wrong.value.packId ? `/packs/${wrong.value.packId}/practice?source=wrong-book&wrongId=${wrong.value.id}` : '/wrong-book')
 const optionLetter = (index: number | string) => letters[Number(index)] ?? ''
 
 const submitRedo = () => {
@@ -260,10 +276,12 @@ const submitRedo = () => {
 }
 
 const markMastered = async () => {
+  if (!wrong.value.id) return
   try {
     await api.updateWrongQuestionStatus(wrong.value.id, 'mastered')
-  } catch {
-    // Offline demo mode updates the local card only.
+  } catch (err) {
+    console.error(err)
+    return
   }
   wrong.value.status = '已掌握'
   resultType.value = 'success'
@@ -274,9 +292,11 @@ onMounted(async () => {
   try {
     wrong.value = await api.getWrongQuestion(String(route.params.id))
   } catch {
-    wrong.value = mockWrongQuestions.find((item) => item.id === route.params.id) ?? mockWrongQuestions[0]
+    wrong.value = emptyWrong()
   }
   shareForm.value.title = `求助：${wrong.value.title}`
-  shareForm.value.content = `我在「${wrong.value.pack}」里反复做错这题，错因是：${wrong.value.reason}。想请大家帮我看看复盘思路是否准确。`
+  shareForm.value.content = wrong.value.id
+    ? `我在「${wrong.value.pack || '学习包'}」里反复做错这题，错因是：${wrong.value.reason || wrong.value.wrongReason || '暂未填写'}。想请大家帮我看看复盘思路是否准确。`
+    : ''
 })
 </script>

@@ -117,8 +117,8 @@ const forgotOpen = ref(false)
 const codeSent = ref(false)
 const forgotMessage = ref('')
 const form = reactive({
-  account: 'student@example.com',
-  password: '12345678',
+  account: '',
+  password: '',
 })
 const forgotForm = reactive({
   account: '',

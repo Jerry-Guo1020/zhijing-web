@@ -8,10 +8,10 @@
     </PageHeader>
 
     <section class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <StatCard label="本周学习" value="9.6h" hint="较上周 +18%" :icon="Clock" />
-      <StatCard label="任务完成率" value="82%" hint="9 / 11 项完成" :icon="CheckCircle2" />
-      <StatCard label="练习正确率" value="76%" hint="错题新增 7 道" :icon="FileQuestion" />
-      <StatCard label="卡片复习" value="42" hint="待复习 24 张" :icon="Layers" />
+      <StatCard label="累计学习" :value="`${stats.totalFocusMinutes}m`" hint="来自专注记录" :icon="Clock" />
+      <StatCard label="完成任务" :value="String(stats.completedTaskCount)" hint="来自真实任务" :icon="CheckCircle2" />
+      <StatCard label="错题数量" :value="String(stats.wrongQuestionCount)" hint="来自错题本" :icon="FileQuestion" />
+      <StatCard label="卡片数量" :value="String(stats.flashcardCount)" hint="来自记忆卡片" :icon="Layers" />
     </section>
 
     <section class="mt-5 grid gap-5 xl:grid-cols-[1fr_380px]">
@@ -41,7 +41,7 @@
     <section class="mt-5 grid gap-5 lg:grid-cols-2">
       <div class="rounded-lg border border-[#dce4dd] bg-white p-5">
         <h2 class="text-lg font-bold text-[#1f2a24]">薄弱知识点</h2>
-        <div class="mt-4 space-y-3">
+        <div v-if="weakPoints.length" class="mt-4 space-y-3">
           <div v-for="item in weakPoints" :key="item.title" class="rounded-lg bg-[#f6f8f5] p-4">
             <div class="flex items-center justify-between gap-3">
               <p class="font-semibold text-[#1f2a24]">{{ item.title }}</p>
@@ -50,69 +50,69 @@
             <p class="mt-2 text-sm leading-6 text-[#66736b]">{{ item.suggestion }}</p>
           </div>
         </div>
+        <div v-else class="mt-4 rounded-lg border border-dashed border-[#b8cfc0] bg-[#f6f8f5] p-8 text-center text-sm text-[#66736b]">暂无薄弱知识点，完成练习后会逐步生成。</div>
       </div>
 
       <div class="rounded-lg border border-[#dce4dd] bg-white p-5">
         <h2 class="text-lg font-bold text-[#1f2a24]">历史报告</h2>
-        <div class="mt-4 space-y-3">
+        <div v-if="reports.length" class="mt-4 space-y-3">
           <article v-for="report in reports" :key="report.id" class="rounded-lg border border-[#dce4dd] p-4">
             <p class="font-semibold text-[#1f2a24]">{{ report.title || '周学习报告' }}</p>
             <p class="mt-1 text-sm text-[#66736b]">{{ report.periodStart || '2026-06-29' }} 至 {{ report.periodEnd || '2026-07-05' }}</p>
             <p class="mt-3 text-sm leading-6 text-[#66736b]">{{ report.aiSummary || aiSummary }}</p>
           </article>
         </div>
+        <div v-else class="mt-4 rounded-lg border border-dashed border-[#b8cfc0] bg-[#f6f8f5] p-8 text-center text-sm text-[#66736b]">暂无历史报告。</div>
       </div>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { CheckCircle2, ChevronRight, Clock, FileQuestion, Layers, Sparkles } from '@lucide/vue'
 import { api } from '../../api/client'
 import PageHeader from '../../components/common/PageHeader.vue'
 import StatCard from '../../components/common/StatCard.vue'
 
-const bars = [
-  { label: '一', value: 42 },
-  { label: '二', value: 58 },
-  { label: '三', value: 51 },
-  { label: '四', value: 66 },
-  { label: '五', value: 72 },
-  { label: '六', value: 63 },
-  { label: '日', value: 81 },
-]
-const aiSummary = ref('本周学习投入较稳定，建议优先复习阅读主旨题和导数定义式错题，把高频错因转成记忆卡片，并用 25 分钟专注块推进目标院校专业课。')
-const weakPoints = [
-  { title: '英语阅读主旨题', risk: '高风险', suggestion: '继续按转折词、作者态度和段落功能三类复练。' },
-  { title: '导数定义式', risk: '中风险', suggestion: '每次先写完整定义式，再做代入和化简。' },
-  { title: '政治混淆选项', risk: '中风险', suggestion: '把绝对化表述整理成卡片，每天快速复习一轮。' },
-]
+const stats = ref({
+  totalFocusMinutes: 0,
+  completedTaskCount: 0,
+  wrongQuestionCount: 0,
+  flashcardCount: 0,
+})
+const bars = computed(() => {
+  const value = Math.min(100, Math.max(6, stats.value.totalFocusMinutes || stats.value.completedTaskCount * 18))
+  return ['一', '二', '三', '四', '五', '六', '日'].map((label, index) => ({ label, value: index === 6 ? value : 6 }))
+})
+const aiSummary = ref('暂无 AI 周报建议。生成报告后，这里会展示基于真实学习记录的总结。')
+const weakPoints = ref<any[]>([])
 const actions = [
   { label: '复练错题本', to: '/wrong-book' },
   { label: '开始专注打卡', to: '/focus' },
   { label: '查看目标规划', to: '/target' },
 ]
-const reports = ref<any[]>([
-  { id: 'report-1', title: '第 27 周学习报告', periodStart: '2026-06-29', periodEnd: '2026-07-05', aiSummary: aiSummary.value },
-])
+const reports = ref<any[]>([])
 
 const generateReport = async () => {
   try {
     const report = await api.generateWeeklyReport()
     reports.value = [report, ...reports.value]
-  } catch {
-    reports.value = [{ id: `report-${Date.now()}`, title: '刚生成的周学习报告', periodStart: '2026-06-29', periodEnd: '2026-07-05', aiSummary: aiSummary.value }, ...reports.value]
+    aiSummary.value = report.aiSummary || aiSummary.value
+  } catch (err) {
+    console.error(err)
   }
 }
 
 onMounted(async () => {
   try {
-    const data = await api.getLearningReports()
-    reports.value = data.length ? data : reports.value
+    const [profile, data] = await Promise.all([api.getProfile(), api.getLearningReports()])
+    stats.value = { ...stats.value, ...(profile?.stats ?? {}) }
+    reports.value = data
+    aiSummary.value = data[0]?.aiSummary || aiSummary.value
   } catch {
-    // Keep demo report.
+    reports.value = []
   }
 })
 </script>

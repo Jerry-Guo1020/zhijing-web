@@ -201,8 +201,8 @@ const aiPack = ref('')
 const aiChapter = ref('第一章 基础概念')
 const aiQuestion = ref('')
 const aiReply = ref('')
-const currentUser = getCurrentUser() ?? { nickname: '小郭同学' }
-const nickname = computed(() => String(currentUser.nickname ?? '小郭同学'))
+const currentUser = getCurrentUser() ?? { nickname: '用户' }
+const nickname = computed(() => String(currentUser.nickname ?? '用户'))
 const avatarText = computed(() => nickname.value.slice(0, 1))
 
 type NavItem = {

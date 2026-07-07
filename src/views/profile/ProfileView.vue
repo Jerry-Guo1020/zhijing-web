@@ -13,17 +13,17 @@
           <div class="flex items-center gap-4">
             <div class="flex h-16 w-16 items-center justify-center rounded-full bg-[#d99a26] text-xl font-bold text-white">{{ avatarText }}</div>
             <div class="min-w-0">
-              <h2 class="truncate text-lg font-bold text-[#1f2a24]">{{ profile.nickname || '小郭同学' }}</h2>
-              <p class="mt-1 truncate text-sm text-[#66736b]">{{ profile.email || 'student@example.com' }}</p>
+              <h2 class="truncate text-lg font-bold text-[#1f2a24]">{{ profile.nickname || '未设置昵称' }}</h2>
+              <p class="mt-1 truncate text-sm text-[#66736b]">{{ profile.email || profile.phone || '未绑定邮箱/手机号' }}</p>
             </div>
           </div>
           <div class="mt-5 grid grid-cols-2 gap-3">
             <div class="rounded-lg bg-[#f6f8f5] p-4">
-              <p class="text-xl font-bold text-[#1f2a24]">12</p>
+              <p class="text-xl font-bold text-[#1f2a24]">{{ stats.currentStreakDays }}</p>
               <p class="mt-1 text-xs text-[#66736b]">连续学习天</p>
             </div>
             <div class="rounded-lg bg-[#f6f8f5] p-4">
-              <p class="text-xl font-bold text-[#1f2a24]">126h</p>
+              <p class="text-xl font-bold text-[#1f2a24]">{{ stats.totalFocusMinutes }}m</p>
               <p class="mt-1 text-xs text-[#66736b]">累计学习</p>
             </div>
           </div>
@@ -39,24 +39,30 @@
         </div>
 
         <div class="rounded-lg border border-[#dce4dd] bg-[#eef4ef] p-5">
-          <h2 class="text-lg font-bold text-[#1f2a24]">目标院校</h2>
-          <p class="mt-3 text-2xl font-bold text-[#1f2a24]">南京大学</p>
-          <p class="mt-2 text-sm text-[#66736b]">计算机科学与技术 · 目标 395 分</p>
-          <RouterLink class="mt-4 inline-flex h-10 w-full items-center justify-center rounded-lg bg-white text-sm font-semibold text-[#1f7a5a]" to="/target">查看目标规划</RouterLink>
+          <h2 class="text-lg font-bold text-[#1f2a24]">目标规划</h2>
+          <template v-if="targetPlan">
+            <p class="mt-3 text-2xl font-bold text-[#1f2a24]">{{ targetPlan.collegeName }}</p>
+            <p class="mt-2 text-sm text-[#66736b]">{{ targetPlan.majorName || '未填写专业' }}{{ targetPlan.targetScore ? ` · 目标 ${targetPlan.targetScore} 分` : '' }}</p>
+          </template>
+          <template v-else>
+            <p class="mt-3 text-2xl font-bold text-[#1f2a24]">暂无目标</p>
+            <p class="mt-2 text-sm text-[#66736b]">设置目标后，这里会展示你的院校和阶段规划。</p>
+          </template>
+          <RouterLink class="mt-4 inline-flex h-10 w-full items-center justify-center rounded-lg bg-white text-sm font-semibold text-[#1f7a5a]" to="/target">{{ targetPlan ? '查看目标规划' : '去设置目标' }}</RouterLink>
         </div>
       </aside>
 
       <div class="space-y-5">
         <div class="grid gap-4 md:grid-cols-3">
-          <StatCard label="完成任务" value="48" hint="本周完成 9 项" :icon="CheckCircle2" />
-          <StatCard label="错题复练" value="31" hint="已掌握 12 道" :icon="NotebookPen" />
-          <StatCard label="社区回复" value="15" hint="收到 6 条帮助" :icon="MessagesSquare" />
+          <StatCard label="完成任务" :value="String(stats.completedTaskCount)" hint="来自真实任务记录" :icon="CheckCircle2" />
+          <StatCard label="错题复练" :value="String(stats.wrongQuestionCount)" hint="来自练习错题本" :icon="NotebookPen" />
+          <StatCard label="学习包" :value="String(stats.learningPackCount)" hint="已创建资料包" :icon="MessagesSquare" />
         </div>
 
         <section class="grid gap-5 lg:grid-cols-[1fr_320px]">
           <div class="rounded-lg border border-[#dce4dd] bg-white p-5">
             <h2 class="text-lg font-bold text-[#1f2a24]">最近学习活动</h2>
-            <div class="mt-4 space-y-3">
+            <div v-if="activities.length" class="mt-4 space-y-3">
               <article v-for="activity in activities" :key="activity.title" class="flex gap-3 rounded-lg bg-[#f6f8f5] p-4">
                 <div class="mt-1 h-2.5 w-2.5 rounded-full bg-[#1f7a5a]"></div>
                 <div>
@@ -65,6 +71,10 @@
                 </div>
               </article>
             </div>
+            <div v-else class="mt-4 rounded-lg border border-dashed border-[#b8cfc0] bg-[#f6f8f5] p-8 text-center">
+              <p class="font-semibold text-[#1f2a24]">暂无学习活动</p>
+              <p class="mt-1 text-sm text-[#66736b]">创建学习包、完成任务或专注后，会在这里沉淀你的真实动态。</p>
+            </div>
           </div>
 
           <div class="rounded-lg border border-[#dce4dd] bg-white p-5">
@@ -72,7 +82,7 @@
             <div class="mt-5 flex h-40 items-end gap-2">
               <div v-for="bar in bars" :key="bar" class="flex-1 rounded-t-md bg-[#1f7a5a]" :style="{ height: `${bar}%` }"></div>
             </div>
-            <p class="mt-4 text-sm leading-6 text-[#66736b]">周五学习峰值最高，周日建议安排错题复盘和下周任务拆解。</p>
+            <p class="mt-4 text-sm leading-6 text-[#66736b]">{{ rhythmText }}</p>
           </div>
         </section>
       </div>
@@ -90,7 +100,7 @@
         <div class="pro-field">
           <span class="pro-label">头像上传</span>
           <div class="flex items-center gap-4">
-            <div class="flex h-16 w-16 items-center justify-center rounded-full border-[3px] border-[#2d3748] bg-[#d99a26] text-xl font-black text-white">{{ editForm.nickname.slice(0, 1) || '郭' }}</div>
+            <div class="flex h-16 w-16 items-center justify-center rounded-full border-[3px] border-[#2d3748] bg-[#d99a26] text-xl font-black text-white">{{ editForm.nickname.slice(0, 1) || avatarText }}</div>
             <button class="pro-btn pro-btn-secondary" type="button">选择头像</button>
           </div>
         </div>
@@ -129,37 +139,92 @@ import ProModal from '../../components/common/ProModal.vue'
 import StatCard from '../../components/common/StatCard.vue'
 
 const profile = ref<any>(getCurrentUser() ?? {})
+const stats = ref({
+  learningPackCount: 0,
+  wrongQuestionCount: 0,
+  flashcardCount: 0,
+  totalFocusMinutes: 0,
+  completedTaskCount: 0,
+  currentStreakDays: 0,
+  longestStreakDays: 0,
+})
+const targetPlan = ref<any | null>(null)
+const packs = ref<any[]>([])
+const tasks = ref<any[]>([])
 const editOpen = ref(false)
 const editForm = ref({
-  nickname: String(profile.value.nickname ?? '小郭同学'),
-  bio: '喜欢把错题拆成可复练的小步骤。',
-  studyGoal: '稳定完成考研英语、高数与专业课复盘。',
-  region: '江苏 南京',
+  nickname: String(profile.value.nickname ?? ''),
+  bio: String(profile.value.bio ?? ''),
+  studyGoal: String(profile.value.studyGoal ?? ''),
+  region: '',
 })
-const avatarText = computed(() => String(profile.value.nickname ?? '郭').slice(0, 1))
-const bars = [38, 52, 48, 65, 82, 74, 68]
-const quickLinks = [
+const avatarText = computed(() => String(profile.value.nickname || '知').slice(0, 1))
+const bars = computed(() => {
+  const activeValue = Math.min(100, Math.max(6, stats.value.totalFocusMinutes || stats.value.completedTaskCount * 18 || packs.value.length * 16))
+  return [6, 6, 6, 6, 6, 6, activeValue]
+})
+const rhythmText = computed(() => stats.value.totalFocusMinutes || stats.value.completedTaskCount
+  ? '本周节奏会根据真实专注、任务和练习记录持续更新。'
+  : '暂无节奏数据，完成一次专注或学习任务后会开始记录。')
+const quickLinks = computed(() => [
   { label: '学习报告', to: '/profile/reports', icon: ClipboardList },
-  { label: '记忆卡片', to: '/packs/pack-english/flashcards', icon: Layers },
+  { label: '记忆卡片', to: packs.value[0]?.id ? `/packs/${packs.value[0].id}/flashcards` : '/packs/new', icon: Layers },
   { label: 'AI 密钥设置', to: '/settings/ai-provider', icon: Bot },
   { label: '学习偏好', to: '/settings', icon: Settings },
-]
-const activities = [
-  { title: '完成英语阅读错题复练', text: '重做 6 道错题，主旨题正确率提升到 78%。' },
-  { title: '创建语文阅读理解学习包', text: '已拖入文本资料，等待 AI 解析章节。' },
-  { title: '发布错题求助帖', text: '社区收到 3 条回复，建议补充题干定位过程。' },
-]
+])
+const activities = computed(() => [
+  ...packs.value.slice(0, 2).map((pack) => ({
+    title: `创建学习包：${pack.title}`,
+    text: pack.studyGoal || pack.subjectName || '已进入你的学习资料库。',
+  })),
+  ...tasks.value.slice(0, 2).map((task) => ({
+    title: `学习任务：${task.title}`,
+    text: task.status === 'completed' ? '已完成' : '待继续推进',
+  })),
+])
 
 onMounted(async () => {
   try {
-    profile.value = await api.getProfile()
+    const [profileData, packData, taskData, targetPlans] = await Promise.all([
+      api.getProfile(),
+      api.getPacks(),
+      api.getTasks(),
+      api.getTargetPlans(),
+    ])
+    profile.value = profileData?.user ?? getCurrentUser() ?? {}
+    stats.value = { ...stats.value, ...(profileData?.stats ?? {}) }
+    packs.value = packData
+    tasks.value = taskData
+    targetPlan.value = targetPlans[0] ?? null
+    editForm.value.nickname = String(profile.value.nickname ?? '')
+    editForm.value.bio = String(profile.value.bio ?? '')
+    editForm.value.studyGoal = String(profile.value.studyGoal ?? '')
   } catch {
-    profile.value = getCurrentUser() ?? { nickname: '小郭同学', email: 'student@example.com' }
+    profile.value = getCurrentUser() ?? {}
+    packs.value = []
+    tasks.value = []
+    targetPlan.value = null
   }
 })
 
-const saveProfile = () => {
-  profile.value = { ...profile.value, nickname: editForm.value.nickname, bio: editForm.value.bio, studyGoal: editForm.value.studyGoal, region: editForm.value.region }
+const saveProfile = async () => {
+  const nextProfile = {
+    ...profile.value,
+    nickname: editForm.value.nickname,
+    bio: editForm.value.bio,
+    studyGoal: editForm.value.studyGoal,
+  }
+  profile.value = nextProfile
   editOpen.value = false
+  try {
+    const updated = await api.updateProfile({
+      nickname: editForm.value.nickname,
+      bio: editForm.value.bio,
+      studyGoal: editForm.value.studyGoal,
+    })
+    profile.value = updated?.user ?? updated ?? nextProfile
+  } catch {
+    profile.value = nextProfile
+  }
 }
 </script>

@@ -22,8 +22,8 @@
       <div class="space-y-5">
         <div class="grid gap-4 md:grid-cols-3">
           <StatCard label="章节" :value="chapters.length" hint="已生成结构" :icon="BookOpen" />
-          <StatCard label="知识点" :value="knowledgePoints.length || 12" hint="可用于问答" :icon="Layers" />
-          <StatCard label="掌握度" :value="`${pack.masteryRate || 58}%`" hint="来自练习与复盘" :icon="TrendingUp" />
+          <StatCard label="知识点" :value="knowledgePoints.length" hint="解析后自动生成" :icon="Layers" />
+          <StatCard label="掌握度" :value="`${pack.masteryRate || 0}%`" hint="来自练习与复盘" :icon="TrendingUp" />
         </div>
 
         <section class="rounded-lg border border-[#dce4dd] bg-white p-5">
@@ -31,7 +31,7 @@
             <h2 class="text-lg font-bold text-[#1f2a24]">章节结构</h2>
             <RouterLink class="text-sm font-semibold text-[#1f7a5a]" :to="`/packs/${packId}/chapters`">完整查看</RouterLink>
           </div>
-          <div class="mt-4 space-y-3">
+          <div v-if="chapters.length" class="mt-4 space-y-3">
             <div v-for="chapter in chapters" :key="chapter.id" class="rounded-lg border border-[#dce4dd] p-4">
               <div class="flex items-center justify-between gap-3">
                 <div>
@@ -42,25 +42,32 @@
               </div>
             </div>
           </div>
+          <div v-else class="mt-4 rounded-lg border border-dashed border-[#b8cfc0] bg-[#f6f8f5] p-8 text-center">
+            <p class="font-semibold text-[#1f2a24]">暂无章节结构</p>
+            <p class="mt-1 text-sm text-[#66736b]">添加资料并完成 AI 解析后，章节会显示在这里。</p>
+          </div>
         </section>
 
         <section class="rounded-lg border border-[#dce4dd] bg-white p-5">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 class="text-lg font-bold text-[#1f2a24]">单词记忆卡</h2>
-              <p class="mt-1 text-sm font-semibold text-[#66736b]">从英语阅读和章节材料中沉淀高频词，配合释义、例句和熟悉度复习。</p>
+              <h2 class="text-lg font-bold text-[#1f2a24]">知识点预览</h2>
+              <p class="mt-1 text-sm font-semibold text-[#66736b]">这里只展示当前学习包解析出的真实知识点。</p>
             </div>
             <RouterLink class="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-[#1f7a5a] px-4 text-sm font-semibold text-white hover:bg-[#155f46]" :to="`/packs/${packId}/flashcards`">
               <Layers class="h-4 w-4" />
-              开始背词
+              查看记忆卡片
             </RouterLink>
           </div>
-          <div class="mt-4 grid gap-3 md:grid-cols-3">
-            <div v-for="word in wordMemoryCards" :key="word.word" class="rounded-lg border border-[#dce4dd] bg-[#fffaf4] p-4">
-              <p class="text-lg font-black text-[#2d3748]">{{ word.word }}</p>
-              <p class="mt-1 text-xs font-bold text-[#64748b]">{{ word.partOfSpeech }} · {{ word.status }}</p>
-              <p class="mt-3 text-sm font-semibold leading-6 text-[#2d3748]">{{ word.meaning }}</p>
+          <div v-if="knowledgePoints.length" class="mt-4 grid gap-3 md:grid-cols-3">
+            <div v-for="point in knowledgePoints.slice(0, 3)" :key="point.id" class="rounded-lg border border-[#dce4dd] bg-[#fffaf4] p-4">
+              <p class="text-lg font-black text-[#2d3748]">{{ point.title }}</p>
+              <p class="mt-1 text-xs font-bold text-[#64748b]">{{ point.tags || '知识点' }}</p>
+              <p class="mt-3 text-sm font-semibold leading-6 text-[#2d3748]">{{ point.description || '暂无说明' }}</p>
             </div>
+          </div>
+          <div v-else class="mt-4 rounded-lg border border-dashed border-[#b8cfc0] bg-[#f6f8f5] p-6 text-center text-sm text-[#66736b]">
+            暂无知识点，完成解析后会展示真实内容。
           </div>
         </section>
       </div>
@@ -126,11 +133,11 @@
     <ProModal :open="sourceOpen" title="引用来源" code="M07. AI 引用来源预览弹窗" description="展示 AI 回答或题目生成所依据的资料片段。" width="720px" @close="sourceOpen = false">
       <div class="space-y-4">
         <div class="pro-field"><span class="pro-label">学习包名称</span><strong class="text-[#2d3748]">{{ pack.title }}</strong></div>
-        <div class="pro-field"><span class="pro-label">文件名</span><span class="text-sm text-[#64748b]">阅读材料节选.txt</span></div>
-        <div class="pro-field"><span class="pro-label">章节名称</span><span class="text-sm text-[#64748b]">{{ chapters[0]?.title || '第一章 基础概念' }}</span></div>
+        <div class="pro-field"><span class="pro-label">文件名</span><span class="text-sm text-[#64748b]">{{ firstMaterial?.fileName || '暂无资料文件' }}</span></div>
+        <div class="pro-field"><span class="pro-label">章节名称</span><span class="text-sm text-[#64748b]">{{ chapters[0]?.title || '暂无章节' }}</span></div>
         <div class="pro-field">
           <span class="pro-label">片段内容</span>
-          <textarea class="pro-textarea" readonly value="作者在转折之后给出真正观点，主旨题需要优先定位态度和论证重心。"></textarea>
+          <textarea class="pro-textarea" readonly :value="firstMaterial?.rawText || '暂无来源片段'"></textarea>
         </div>
         <div class="pro-panel">
           <p class="text-sm font-black text-[#2d3748]">相关上下文</p>
@@ -164,7 +171,7 @@
       <div class="space-y-4">
         <div class="pro-field"><span class="pro-label">当前阶段</span><strong class="text-[#2d3748]">提取知识点</strong></div>
         <div class="rounded-[8px] border-[3px] border-[#2d3748] bg-white p-2"><div class="h-4 rounded bg-[#e2e8f0]"><div class="h-4 w-[68%] rounded bg-[#22c55e]"></div></div></div>
-        <div class="pro-panel"><p class="text-sm font-black text-[#2d3748]">已识别结果预览</p><p class="mt-2 text-sm leading-6 text-[#64748b]">章节 {{ chapters.length }} 个、知识点 {{ knowledgePoints.length || 12 }} 个、练习题 8 道。</p></div>
+        <div class="pro-panel"><p class="text-sm font-black text-[#2d3748]">已识别结果预览</p><p class="mt-2 text-sm leading-6 text-[#64748b]">章节 {{ chapters.length }} 个、知识点 {{ knowledgePoints.length }} 个。</p></div>
       </div>
       <template #footer>
         <button class="pro-btn pro-btn-secondary" type="button" @click="parseProgressOpen = false">取消解析</button>
@@ -182,21 +189,22 @@ import { api } from '../../api/client'
 import PageHeader from '../../components/common/PageHeader.vue'
 import ProModal from '../../components/common/ProModal.vue'
 import StatCard from '../../components/common/StatCard.vue'
-import { mockChapters, mockPacks } from '../../data/mock'
 
 const route = useRoute()
 const packId = computed(() => String(route.params.id))
-const pack = ref<any>(mockPacks[0])
-const chapters = ref<any[]>(mockChapters)
+const pack = ref<any>({ title: '学习包', subjectName: '学习包', studyGoal: '' })
+const chapters = ref<any[]>([])
 const knowledgePoints = ref<any[]>([])
+const materials = ref<any[]>([])
 const renameOpen = ref(false)
 const deleteOpen = ref(false)
 const sourceOpen = ref(false)
 const questionSettingsOpen = ref(false)
 const parseProgressOpen = ref(false)
 const deleteConfirm = ref('')
-const renameForm = ref({ title: mockPacks[0].title, studyGoal: mockPacks[0].studyGoal })
-const questionForm = ref({ chapter: '第一章 基础概念', type: '单选题', difficulty: '中等', count: 8, withExplanation: true, startNow: true })
+const renameForm = ref({ title: '', studyGoal: '' })
+const questionForm = ref({ chapter: '', type: '单选题', difficulty: '中等', count: 8, withExplanation: true, startNow: true })
+const firstMaterial = computed(() => materials.value[0])
 
 const actions = computed(() => [
   { label: 'AI 问答', text: '带学习包上下文提问', to: `/packs/${packId.value}/qa`, icon: Bot },
@@ -205,22 +213,20 @@ const actions = computed(() => [
   { label: '错题复盘', text: '查看相关错题', to: '/wrong-book', icon: NotebookPen },
 ])
 
-const wordMemoryCards = [
-  { word: 'context', partOfSpeech: 'n.', meaning: '语境；背景；上下文', status: '待复习' },
-  { word: 'derive', partOfSpeech: 'v.', meaning: '获得；源于；推导出', status: '新词' },
-  { word: 'contrast', partOfSpeech: 'n./v.', meaning: '对比；形成对照', status: '熟悉' },
-]
-
 const load = async () => {
   try {
     const detail = await api.getPackDetail(packId.value)
     pack.value = detail.pack ?? { title: '学习包不存在', subjectName: '学习包', studyGoal: '' }
     chapters.value = detail.chapters ?? []
     knowledgePoints.value = detail.knowledgePoints ?? []
+    materials.value = detail.materials ?? []
+    renameForm.value = { title: pack.value.title ?? '', studyGoal: pack.value.studyGoal ?? '' }
+    questionForm.value.chapter = chapters.value[0]?.title ?? ''
   } catch {
-    pack.value = mockPacks.find((item) => item.id === packId.value) ?? mockPacks[0]
-    renameForm.value = { title: pack.value.title, studyGoal: pack.value.studyGoal }
-    chapters.value = mockChapters
+    pack.value = { title: '学习包不存在', subjectName: '学习包', studyGoal: '' }
+    chapters.value = []
+    knowledgePoints.value = []
+    materials.value = []
   }
 }
 

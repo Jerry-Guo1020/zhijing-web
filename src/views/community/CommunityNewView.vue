@@ -17,7 +17,7 @@
             关联学习包
             <select v-model="form.packId" class="mt-2 h-11 w-full rounded-lg border border-[#dce4dd] bg-[#f6f8f5] px-3 outline-none focus:border-[#1f7a5a]">
               <option value="">不关联</option>
-              <option v-for="pack in mockPacks" :key="pack.id" :value="pack.id">{{ pack.title }}</option>
+              <option v-for="pack in packs" :key="pack.id" :value="pack.id">{{ pack.title }}</option>
             </select>
           </label>
         </div>
@@ -71,13 +71,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { api } from '../../api/client'
 import PageHeader from '../../components/common/PageHeader.vue'
-import { mockPacks } from '../../data/mock'
 
 const router = useRouter()
+const packs = ref<any[]>([])
 const postTypes = [
   { label: '提问互助', value: 'help' },
   { label: '错题求助', value: 'wrong_question' },
@@ -86,13 +86,21 @@ const postTypes = [
   { label: 'AI 回答求证', value: 'ai_verification' },
 ]
 const form = reactive({ type: 'wrong_question', title: '', content: '', packId: '', wrongQuestionId: '' })
-const tagInput = ref('错题本,复盘')
+const tagInput = ref('')
 const message = ref('')
 const messageType = ref<'success' | 'error'>('success')
 const previewOpen = ref(false)
 const tags = computed(() => tagInput.value.split(/[,，]/).map((item) => item.trim()).filter(Boolean))
 const currentTypeLabel = computed(() => postTypes.find((item) => item.value === form.type)?.label ?? '提问互助')
-const currentPackName = computed(() => mockPacks.find((pack) => pack.id === form.packId)?.title ?? '未关联学习包')
+const currentPackName = computed(() => packs.value.find((pack) => pack.id === form.packId)?.title ?? '未关联学习包')
+
+onMounted(async () => {
+  try {
+    packs.value = await api.getPacks()
+  } catch {
+    packs.value = []
+  }
+})
 
 const saveDraft = () => {
   localStorage.setItem('zhijing_community_draft', JSON.stringify({ ...form, tags: tags.value }))
@@ -108,8 +116,11 @@ const publish = async () => {
   }
   try {
     await api.createCommunityPost(form)
-  } catch {
-    // Offline demo mode still returns the user to the community feed.
+  } catch (err) {
+    console.error(err)
+    messageType.value = 'error'
+    message.value = '发布失败，请稍后重试。'
+    return
   }
   messageType.value = 'success'
   message.value = '发布成功。'

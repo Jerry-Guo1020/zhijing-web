@@ -146,7 +146,7 @@ export const api = {
   getQuestions: (packId: string, chapterId?: string) =>
     request<any[]>(`/practice/questions?packId=${packId}${chapterId ? `&chapterId=${chapterId}` : ''}`),
   getTasks: () => request<any[]>('/tasks'),
-  createTask: (body: { title: string; targetValue?: number; deadlineAt?: string }) =>
+  createTask: (body: { title: string; targetValue?: number; deadlineAt?: string; packId?: string; chapterId?: string }) =>
     request<any>('/tasks', { method: 'POST', body: JSON.stringify(body) }),
   completeTask: (id: string) => request<any>(`/tasks/${id}/complete`, { method: 'PUT', body: JSON.stringify({}) }),
   getWrongBook: () => request<any[]>('/wrong-book'),
@@ -154,16 +154,24 @@ export const api = {
   updateWrongQuestionStatus: (id: string, status: string) =>
     request<any>(`/wrong-book/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) }),
   getFlashcards: (packId: string) => request<any[]>(`/flashcards?packId=${packId}`),
+  createFlashcard: (body: { packId: string; chapterId?: string; type?: string; frontText: string; backText: string }) =>
+    request<any>('/flashcards', { method: 'POST', body: JSON.stringify(body) }),
+  reviewFlashcard: (id: string, rating: string) =>
+    request<any>(`/flashcards/${id}/review`, { method: 'POST', body: JSON.stringify({ rating }) }),
   getFocus: () => request<any[]>('/focus'),
   startFocus: (body: { plannedMinutes: number; packId?: string; taskId?: string }) =>
     request<any>('/focus/start', { method: 'POST', body: JSON.stringify(body) }),
   finishFocus: (id: string, body: { actualMinutes: number; note?: string; status?: string }) =>
     request<any>(`/focus/${id}/finish`, { method: 'POST', body: JSON.stringify(body) }),
   getProfile: () => request<any>('/profile'),
-  getRanking: () => request<any[]>('/ranking'),
+  updateProfile: (body: { nickname?: string; bio?: string; studyGoal?: string }) =>
+    request<any>('/users/me', { method: 'PUT', body: JSON.stringify(body) }),
+  getRanking: () => request<any>('/ranking'),
   getCommunityPosts: () => request<any[]>('/community/posts'),
   getCommunityPost: (id: string) => request<any>(`/community/posts/${id}`),
   createCommunityPost: (body: any) => request<any>('/community/posts', { method: 'POST', body: JSON.stringify(body) }),
+  createCommunityComment: (id: string, body: { content: string; parentId?: string }) =>
+    request<any>(`/community/posts/${id}/comments`, { method: 'POST', body: JSON.stringify(body) }),
   getTargetPlans: () => request<any[]>('/target-plans'),
   createTargetPlan: (body: any) => request<any>('/target-plans', { method: 'POST', body: JSON.stringify(body) }),
   searchColleges: (query: string) => request<any[]>(`/target-plans/colleges/search?q=${encodeURIComponent(query)}`),

@@ -80,11 +80,11 @@ const router = useRouter()
 const loading = ref(false)
 const error = ref('')
 const form = reactive({
-  nickname: '小郭同学',
-  email: 'student@example.com',
+  nickname: '',
+  email: '',
   phone: '',
-  password: '12345678',
-  studyGoal: '用 AI 整理资料并稳定复盘',
+  password: '',
+  studyGoal: '',
 })
 const registerSteps = ['上传资料', '生成章节', '智能练习', '错题复盘']
 

@@ -22,7 +22,7 @@
         <RouterLink v-for="post in filteredPosts" :key="post.id" class="block rounded-lg border border-[#dce4dd] bg-white p-5 transition hover:border-[#b8cfc0]" :to="`/community/${post.id}`">
           <div class="flex flex-wrap items-center gap-2 text-xs font-semibold">
             <span class="rounded-full bg-[#eef4ef] px-2 py-1 text-[#1f7a5a]">{{ post.type }}</span>
-            <span class="rounded-full bg-[#f6f8f5] px-2 py-1 text-[#66736b]">{{ post.pack }}</span>
+            <span v-if="post.pack" class="rounded-full bg-[#f6f8f5] px-2 py-1 text-[#66736b]">{{ post.pack }}</span>
             <span class="text-[#66736b]">{{ post.createdAt }}</span>
           </div>
           <h2 class="mt-3 text-lg font-bold text-[#1f2a24]">{{ post.title }}</h2>
@@ -38,6 +38,10 @@
             </div>
           </div>
         </RouterLink>
+        <div v-if="!filteredPosts.length" class="rounded-lg border border-dashed border-[#b8cfc0] bg-white p-10 text-center">
+          <h2 class="text-lg font-bold text-[#1f2a24]">暂无社区帖子</h2>
+          <p class="mt-2 text-sm text-[#66736b]">发布你的第一个问题、复盘或经验后会显示在这里。</p>
+        </div>
       </div>
 
       <aside class="space-y-5">
@@ -50,9 +54,9 @@
         <div class="rounded-lg border border-[#dce4dd] bg-white p-5">
           <h2 class="text-lg font-bold text-[#1f2a24]">我的动态</h2>
           <div class="mt-4 grid gap-3 text-sm text-[#66736b]">
-            <p>本周发帖 2 篇</p>
-            <p>收到回复 15 条</p>
-            <p>收藏复盘模板 4 个</p>
+            <p>已发布 {{ myPostCount }} 篇</p>
+            <p>收到回复 {{ myReplyCount }} 条</p>
+            <p>获得点赞 {{ myLikeCount }} 次</p>
           </div>
         </div>
       </aside>
@@ -112,10 +116,9 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { MessageCircle, MessageSquarePlus, PenLine, ThumbsUp } from '@lucide/vue'
-import { api } from '../../api/client'
+import { api, getCurrentUser } from '../../api/client'
 import PageHeader from '../../components/common/PageHeader.vue'
 import ProModal from '../../components/common/ProModal.vue'
-import { mockPosts } from '../../data/mock'
 
 const tabs = ['全部', '提问互助', '错题求助', '学习复盘', '经验分享', 'AI 回答求证']
 const postTypes = [
@@ -130,31 +133,44 @@ const activeTab = ref('全部')
 const quickPostOpen = ref(false)
 const privacyChecked = ref(true)
 const publishToCommunity = ref(true)
-const posts = ref<any[]>(mockPosts)
+const posts = ref<any[]>([])
 const quickPost = reactive({ type: 'help', title: '', content: '' })
+const currentUser = getCurrentUser()
+const currentUserId = currentUser?.id ?? currentUser?.sub
 
 const normalizeType = (type: string) => postTypes.find((item) => item.value === type)?.label ?? type
 const filteredPosts = computed(() => posts.value.filter((post) => activeTab.value === '全部' || normalizeType(post.type) === activeTab.value || post.type === activeTab.value))
+const myPosts = computed(() => posts.value.filter((post) => currentUserId && post.userId === currentUserId))
+const myPostCount = computed(() => myPosts.value.length)
+const myReplyCount = computed(() => myPosts.value.reduce((sum, post) => sum + Number(post.replies ?? 0), 0))
+const myLikeCount = computed(() => myPosts.value.reduce((sum, post) => sum + Number(post.likes ?? 0), 0))
+
+const formatDate = (value?: string) => {
+  if (!value) return ''
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('zh-CN')
+}
+
+const normalizePost = (post: any) => ({
+  id: post.id,
+  userId: post.userId,
+  type: normalizeType(post.type),
+  title: post.title,
+  excerpt: post.excerpt ?? post.content ?? '',
+  author: post.author ?? post.user?.nickname ?? '用户',
+  replies: post.replies ?? post.commentCount ?? 0,
+  likes: post.likes ?? post.likeCount ?? 0,
+  createdAt: formatDate(post.createdAt),
+  tags: post.tags ?? [],
+  pack: post.pack ?? post.packTitle ?? '',
+})
 
 const publishQuickPost = async () => {
   try {
-    await api.createCommunityPost(quickPost)
+    const created = await api.createCommunityPost(quickPost)
+    posts.value = [normalizePost(created), ...posts.value]
   } catch {
-    posts.value = [
-      {
-        id: `post-local-${Date.now()}`,
-        type: normalizeType(quickPost.type),
-        title: quickPost.title,
-        excerpt: quickPost.content,
-        author: '郭同学',
-        replies: 0,
-        likes: 0,
-        createdAt: '刚刚',
-        tags: [],
-        pack: '未关联学习包',
-      },
-      ...posts.value,
-    ]
+    return
   }
   quickPostOpen.value = false
   quickPost.title = ''
@@ -164,9 +180,9 @@ const publishQuickPost = async () => {
 onMounted(async () => {
   try {
     const data = await api.getCommunityPosts()
-    posts.value = data.length ? data : mockPosts
+    posts.value = data.map(normalizePost)
   } catch {
-    posts.value = mockPosts
+    posts.value = []
   }
 })
 </script>

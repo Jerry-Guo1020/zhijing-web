@@ -23,16 +23,24 @@
         </div>
       </aside>
 
-      <div class="space-y-3">
+      <div v-if="tasks.length" class="space-y-3">
         <article v-for="task in tasks" :key="task.id" class="flex items-center justify-between gap-4 rounded-lg border border-[#dce4dd] bg-white p-4">
           <div>
             <p class="font-semibold text-[#1f2a24]">{{ task.title }}</p>
             <p class="mt-1 text-sm text-[#66736b]">目标 {{ task.targetValue || 1 }} 项</p>
           </div>
           <button class="rounded-lg border border-[#dce4dd] px-3 py-2 text-sm font-medium text-[#1f7a5a] hover:bg-[#eef4ef]" type="button" @click="complete(task)">
-            {{ task.status === 'done' ? '已完成' : '完成' }}
+            {{ isDone(task.status) ? '已完成' : '完成' }}
           </button>
         </article>
+      </div>
+      <div v-else class="rounded-lg border border-dashed border-[#b8cfc0] bg-[#f6f8f5] p-10 text-center">
+        <p class="font-semibold text-[#1f2a24]">暂无学习任务</p>
+        <p class="mt-1 text-sm text-[#66736b]">新建任务后，这里会显示你的真实学习待办。</p>
+        <button class="mt-4 inline-flex h-10 items-center gap-2 rounded-lg bg-white px-4 text-sm font-semibold text-[#1f7a5a]" type="button" @click="taskModalOpen = true">
+          <Plus class="h-4 w-4" />
+          新建任务
+        </button>
       </div>
     </section>
 
@@ -47,7 +55,7 @@
       <div class="space-y-4">
         <div class="pro-field">
           <span class="pro-label">任务标题</span>
-          <input v-model="form.title" class="pro-input" placeholder="例如：复盘英语阅读错题 8 道" />
+          <input v-model="form.title" class="pro-input" placeholder="输入一个真实学习任务" />
         </div>
         <div class="pro-field">
           <span class="pro-label">任务类型</span>
@@ -63,16 +71,14 @@
         <div class="pro-field">
           <span class="pro-label">关联学习包</span>
           <select v-model="taskPack" class="pro-select">
-            <option>考研英语阅读精读</option>
-            <option>高等数学极限与导数</option>
-            <option>语文阅读理解学习包</option>
+            <option value="">不关联学习包</option>
+            <option v-for="pack in packs" :key="pack.id" :value="pack.id">{{ pack.title }}</option>
           </select>
         </div>
         <div class="pro-field">
           <span class="pro-label">关联章节</span>
           <select v-model="taskChapter" class="pro-select">
-            <option>第一章 基础概念</option>
-            <option>第二章 重点训练</option>
+            <option value="">不关联章节</option>
           </select>
         </div>
         <div class="pro-field">
@@ -106,34 +112,43 @@ import { Plus } from '@lucide/vue'
 import { api } from '../../api/client'
 import PageHeader from '../../components/common/PageHeader.vue'
 import ProModal from '../../components/common/ProModal.vue'
-import { mockTasks } from '../../data/mock'
 
-const tasks = ref<any[]>(mockTasks)
+const tasks = ref<any[]>([])
+const packs = ref<any[]>([])
 const form = reactive({ title: '', targetValue: 1 })
 const taskModalOpen = ref(false)
-const taskType = ref('复习错题')
-const taskPack = ref('考研英语阅读精读')
-const taskChapter = ref('第一章 基础概念')
+const taskType = ref('自定义')
+const taskPack = ref('')
+const taskChapter = ref('')
 const deadlineAt = ref('')
-const remindAt = ref('20:30')
+const remindAt = ref('')
 const repeatTask = ref(false)
-const doneCount = computed(() => tasks.value.filter((task) => task.status === 'done').length)
+const isDone = (status: string) => status === 'completed' || status === 'done'
+const doneCount = computed(() => tasks.value.filter((task) => isDone(task.status)).length)
 
 const load = async () => {
   try {
-    tasks.value = await api.getTasks()
+    const [taskData, packData] = await Promise.all([api.getTasks(), api.getPacks()])
+    tasks.value = taskData
+    packs.value = packData
   } catch {
-    tasks.value = mockTasks
+    tasks.value = []
+    packs.value = []
   }
 }
 
 const create = async () => {
   if (!form.title.trim()) return
   try {
-    const task = await api.createTask(form)
+    const task = await api.createTask({
+      ...form,
+      packId: taskPack.value || undefined,
+      chapterId: taskChapter.value || undefined,
+      deadlineAt: deadlineAt.value || undefined,
+    } as any)
     tasks.value = [task, ...tasks.value]
-  } catch {
-    tasks.value = [{ id: `task-${Date.now()}`, title: form.title, targetValue: form.targetValue, status: 'todo' }, ...tasks.value]
+  } catch (err) {
+    console.error(err)
   }
   form.title = ''
   form.targetValue = 1
@@ -141,11 +156,13 @@ const create = async () => {
 }
 
 const complete = async (task: any) => {
-  task.status = 'done'
+  const oldStatus = task.status
+  task.status = 'completed'
   try {
-    await api.completeTask(task.id)
+    const updated = await api.completeTask(task.id)
+    Object.assign(task, updated ?? { status: 'completed' })
   } catch {
-    task.status = 'done'
+    task.status = oldStatus
   }
 }
 
