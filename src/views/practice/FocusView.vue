@@ -129,9 +129,8 @@
         <div class="pro-field">
           <span class="pro-label">关联学习包</span>
           <select v-model="focusPack" class="pro-select">
-            <option>考研英语阅读精读</option>
-            <option>高等数学极限与导数</option>
-            <option>语文阅读理解学习包</option>
+            <option value="">不关联学习包</option>
+            <option v-for="pack in packs" :key="pack.id" :value="pack.id">{{ pack.title }}</option>
           </select>
         </div>
         <div class="pro-field">
@@ -166,12 +165,6 @@ const presets = [
   { label: '1.5 小时', minutes: 90 },
   { label: '2 小时', minutes: 120 },
 ]
-const bars = [38, 52, 44, 74, 63, 86, 70]
-const stats = [
-  { label: '今日累计', value: '86m' },
-  { label: '连续天数', value: '12' },
-  { label: '有效次数', value: '3' },
-]
 
 const selectedMinutes = ref(25)
 const totalSeconds = ref(25 * 60)
@@ -181,15 +174,61 @@ const finishOpen = ref(false)
 const invalidated = ref(false)
 const message = ref('')
 const note = ref('')
-const focusPack = ref('考研英语阅读精读')
+const focusPack = ref('')
 const taskCompleted = ref(false)
 const generateSummary = ref(true)
 const violationCount = ref(0)
 const focusRecordId = ref('')
 const restoringFullscreen = ref(false)
+const focusRecords = ref<any[]>([])
+const packs = ref<any[]>([])
 let timer: number | undefined
 
 const circumference = 2 * Math.PI * 105
+const isCompleted = (record: any) => record.status === 'completed'
+const isToday = (value?: string) => {
+  if (!value) return false
+  return new Date(value).toDateString() === new Date().toDateString()
+}
+const todayCompletedRecords = computed(() => focusRecords.value.filter((record) => isCompleted(record) && isToday(record.endedAt ?? record.createdAt)))
+const todayMinutes = computed(() => todayCompletedRecords.value.reduce((sum, record) => sum + Number(record.actualMinutes ?? 0), 0))
+const streakDays = computed(() => {
+  const days = Array.from(new Set(
+    focusRecords.value
+      .filter(isCompleted)
+      .map((record) => new Date(record.endedAt ?? record.createdAt).toISOString().slice(0, 10)),
+  )).sort((a, b) => b.localeCompare(a))
+  if (!days.length) return 0
+
+  let streak = 0
+  const cursor = new Date()
+  for (const day of days) {
+    const expected = cursor.toISOString().slice(0, 10)
+    if (day !== expected) break
+    streak += 1
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  return streak
+})
+const stats = computed(() => [
+  { label: '今日累计', value: `${todayMinutes.value}m` },
+  { label: '连续天数', value: String(streakDays.value) },
+  { label: '有效次数', value: String(todayCompletedRecords.value.length) },
+])
+const bars = computed(() => {
+  const byDay = new Map<string, number>()
+  focusRecords.value.filter(isCompleted).forEach((record) => {
+    const key = new Date(record.endedAt ?? record.createdAt).toISOString().slice(0, 10)
+    byDay.set(key, (byDay.get(key) ?? 0) + Number(record.actualMinutes ?? 0))
+  })
+  const values = Array.from({ length: 7 }, (_, offset) => {
+    const date = new Date()
+    date.setDate(date.getDate() - (6 - offset))
+    return byDay.get(date.toISOString().slice(0, 10)) ?? 0
+  })
+  const max = Math.max(...values, 1)
+  return values.map((value) => value ? Math.round((value / max) * 100) : 0)
+})
 const minutes = computed(() => String(Math.floor(totalSeconds.value / 60)).padStart(2, '0'))
 const seconds = computed(() => String(totalSeconds.value % 60).padStart(2, '0'))
 const progressOffset = computed(() => {
@@ -235,10 +274,11 @@ const start = async () => {
     registerViolation('浏览器未允许全屏，已计入一次警告。')
   }
   try {
-    const record = await api.startFocus({ plannedMinutes: selectedMinutes.value })
+    const record = await api.startFocus({ plannedMinutes: selectedMinutes.value, packId: focusPack.value || undefined })
     focusRecordId.value = record.id
-  } catch {
-    focusRecordId.value = 'demo-focus'
+  } catch (err) {
+    running.value = false
+    message.value = err instanceof Error ? err.message : '专注记录创建失败，请稍后重试。'
   }
 }
 
@@ -311,20 +351,35 @@ const handleFullscreen = () => {
 const handleWindowBlur = () => registerViolation()
 
 const saveFinish = async () => {
+  if (!focusRecordId.value) return
   try {
-    await api.finishFocus(focusRecordId.value, { actualMinutes: selectedMinutes.value, note: note.value })
+    const saved = await api.finishFocus(focusRecordId.value, { actualMinutes: selectedMinutes.value, note: note.value })
+    if (saved) {
+      focusRecords.value = [saved, ...focusRecords.value.filter((record) => record.id !== saved.id)]
+    }
   } catch {
-    // Offline demo mode keeps the completion in the UI.
+    message.value = '专注记录保存失败，请稍后重试。'
+    return
   }
   finishOpen.value = false
   reset()
   message.value = '专注记录已保存，建议继续复盘一个错题。'
 }
 
-onMounted(() => {
+onMounted(async () => {
   document.addEventListener('visibilitychange', handleVisibility)
   document.addEventListener('fullscreenchange', handleFullscreen)
   window.addEventListener('blur', handleWindowBlur)
+  try {
+    focusRecords.value = await api.getFocus()
+  } catch {
+    focusRecords.value = []
+  }
+  try {
+    packs.value = await api.getPacks()
+  } catch {
+    packs.value = []
+  }
 })
 
 onBeforeUnmount(() => {

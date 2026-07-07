@@ -36,7 +36,7 @@
       <div class="space-y-4">
         <div class="pro-field">
           <span class="pro-label">学习包名称</span>
-          <input v-model="createForm.title" class="pro-input" placeholder="例如：语文阅读理解学习包" />
+          <input v-model="createForm.title" class="pro-input" placeholder="请输入学习包名称" />
         </div>
         <div class="pro-field">
           <span class="pro-label">学习目标</span>
@@ -90,9 +90,9 @@ const keyword = ref('')
 const activeTab = ref('全部')
 const createOpen = ref(false)
 const createForm = ref({
-  title: '语文阅读理解学习包',
-  studyGoal: '拖入文本资料，生成章节、练习和错题复盘。',
-  subjectName: '语文',
+  title: '',
+  studyGoal: '',
+  subjectName: '综合',
   deadline: '',
   mode: '粘贴文本生成',
 })

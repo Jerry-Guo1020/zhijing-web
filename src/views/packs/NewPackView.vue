@@ -84,7 +84,7 @@
         <div class="pro-field">
           <span class="pro-label">文件列表</span>
           <div class="rounded-[8px] border-[3px] border-[#2d3748] bg-white p-3 text-sm font-bold text-[#2d3748]">
-            {{ materialName || `${form.title}.txt` }} · {{ materialText.length || 0 }} 字符 · {{ materialText ? '待解析' : '等待拖入' }}
+            {{ materialName || '暂无资料文件' }} · {{ materialText.length || 0 }} 字符 · {{ materialText ? '待解析' : '等待拖入' }}
           </div>
         </div>
         <div class="pro-field">
@@ -133,7 +133,7 @@
         </div>
         <div class="pro-panel">
           <p class="text-sm font-black text-[#2d3748]">已识别结果预览</p>
-          <p class="mt-2 text-sm leading-6 text-[#64748b]">章节 3 个、知识点 12 个、练习题 8 道、记忆卡片 6 张。</p>
+          <p class="mt-2 text-sm leading-6 text-[#64748b]">解析完成后会展示真实章节、知识点、练习题和记忆卡片。</p>
         </div>
       </div>
       <template #footer>
@@ -161,9 +161,9 @@ const materialText = ref('')
 const materialName = ref('')
 const materialModalOpen = ref(false)
 const parseProgressOpen = ref(false)
-const currentParseStage = ref(1)
+const currentParseStage = ref(0)
 const parseStages = ['读取资料文本', '识别章节结构', '提取知识点', '生成章节摘要', '生成练习题', '生成记忆卡片']
-const parseProgress = ref(42)
+const parseProgress = ref(0)
 const parseOptions = ref([
   { key: 'chapters', label: '自动识别章节', enabled: true },
   { key: 'summary', label: '生成章节摘要', enabled: true },
@@ -172,9 +172,9 @@ const parseOptions = ref([
   { key: 'flashcards', label: '生成记忆卡片', enabled: false },
 ])
 const form = reactive({
-  title: '语文阅读理解学习包',
-  subjectName: '语文',
-  studyGoal: '整理阅读资料，生成错题复盘和练习任务',
+  title: '',
+  subjectName: '',
+  studyGoal: '',
 })
 const steps = [
   { title: '拖入文本资料', text: '以文字原文建立资料源，不走点击上传按钮。' },
