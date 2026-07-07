@@ -84,8 +84,10 @@
       </div>
     </header>
 
-    <main class="mx-auto max-w-[1440px] px-4 py-5 md:ml-[242px] md:px-6 md:py-6">
-      <slot />
+    <main class="px-4 py-5 md:pl-[266px] md:pr-6 md:py-6">
+      <div class="mx-auto w-full max-w-[1440px]">
+        <slot />
+      </div>
     </main>
 
     <nav class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-[#dce4dd] bg-white px-2 py-2 md:hidden">
