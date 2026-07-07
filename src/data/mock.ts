@@ -1,0 +1,192 @@
+export const mockPacks = [
+  {
+    id: 'pack-english',
+    title: '考研英语阅读精读',
+    subjectName: '英语',
+    studyGoal: '14 天完成长难句与阅读题型复盘',
+    status: 'active',
+    masteryRate: 68,
+    updatedAt: '2026-07-04',
+  },
+  {
+    id: 'pack-math',
+    title: '高等数学极限与导数',
+    subjectName: '数学',
+    studyGoal: '梳理概念、例题和易错题',
+    status: 'active',
+    masteryRate: 46,
+    updatedAt: '2026-07-03',
+  },
+  {
+    id: 'pack-politics',
+    title: '政治核心考点背诵',
+    subjectName: '政治',
+    studyGoal: '按章节拆解知识点并生成卡片',
+    status: 'draft',
+    masteryRate: 22,
+    updatedAt: '2026-07-02',
+  },
+]
+
+export const mockTargetColleges = [
+  {
+    id: 'college-nju',
+    name: '南京大学',
+    region: '江苏 南京',
+    type: '985 / 双一流',
+    scoreRange: '370-395',
+    majors: ['计算机科学与技术', '软件工程', '中国语言文学'],
+    introduction: '综合实力强，基础学科和交叉学科资源丰富，适合目标明确、需要长期复盘规划的学生。',
+    admissionSummary: '近年复试更看重基础能力、科研潜力与英语材料阅读能力。',
+  },
+  {
+    id: 'college-suda',
+    name: '苏州大学',
+    region: '江苏 苏州',
+    type: '211 / 双一流',
+    scoreRange: '345-375',
+    majors: ['教育学', '应用心理', '软件工程'],
+    introduction: '学科覆盖完整，城市资源充足，适合希望兼顾专业学习与实践机会的学生。',
+    admissionSummary: '专业课考察稳定，建议提前建立章节题库与错题复练节奏。',
+  },
+  {
+    id: 'college-zju',
+    name: '浙江大学',
+    region: '浙江 杭州',
+    type: '985 / 双一流',
+    scoreRange: '380-410',
+    majors: ['人工智能', '控制科学与工程', '教育技术学'],
+    introduction: '工科和交叉方向优势明显，对综合能力、项目经历和专业基础要求较高。',
+    admissionSummary: '初试分数竞争强，复试常关注项目表达和知识迁移能力。',
+  },
+]
+
+export const mockChapters = [
+  { id: 'ch-1', title: '第一章 基础概念', summary: 'AI 已识别 8 个基础知识点', masteryRate: 72 },
+  { id: 'ch-2', title: '第二章 重点训练', summary: '包含高频题型和错因归纳', masteryRate: 45 },
+  { id: 'ch-3', title: '第三章 综合复盘', summary: '适合练习后进行回顾', masteryRate: 30 },
+]
+
+export const mockQuestions = [
+  {
+    id: 'q-1',
+    stem: '下面哪一项最能体现“学习路径”的含义？',
+    options: ['随意浏览资料', '按目标拆解章节与任务', '只记录学习时长', '只做模拟题'],
+    answer: 1,
+    difficulty: '基础',
+  },
+  {
+    id: 'q-2',
+    stem: '错题复盘最应该优先记录什么？',
+    options: ['题目来源', '正确答案', '错误原因与相关知识点', '完成时间'],
+    answer: 2,
+    difficulty: '中等',
+  },
+]
+
+export const mockTasks = [
+  { id: 'task-1', title: '完成英语阅读 2 篇并整理生词', status: 'doing', targetValue: 2 },
+  { id: 'task-2', title: '复盘高数极限错题 10 道', status: 'todo', targetValue: 10 },
+  { id: 'task-3', title: '记忆卡片复习一轮', status: 'done', targetValue: 1 },
+]
+
+export const mockWrongQuestions = [
+  {
+    id: 'wrong-1',
+    title: '阅读理解主旨题误判',
+    packId: 'pack-english',
+    pack: '考研英语阅读精读',
+    chapter: '阅读题型拆解',
+    status: '待复盘',
+    reason: '定位句和转折关系识别不稳定',
+    stem: '作者在第三段中提到 “however” 后的内容，主要意在说明什么？',
+    options: ['补充背景信息', '转向作者真实观点', '举例说明前文', '弱化文章结论'],
+    userAnswer: 'A',
+    correctAnswer: 'B',
+    wrongCount: 3,
+    reviewCount: 1,
+    lastWrongAt: '2026-07-04 21:12',
+    aiReview: '本题关键是识别转折后的观点重心。你把前一句背景当成主旨，忽略了 however 后作者真正强调的判断。',
+    knowledgePoints: ['转折信号词', '主旨题定位', '作者态度'],
+  },
+  {
+    id: 'wrong-2',
+    title: '导数定义式变形',
+    packId: 'pack-math',
+    pack: '高等数学极限与导数',
+    chapter: '导数定义与几何意义',
+    status: '已掌握',
+    reason: '忽略自变量增量趋近过程',
+    stem: '已知 f(x)=x²，按导数定义求 f\'(a) 的正确变形是？',
+    options: ['lim h->0 [(a+h)²-a²]/h', 'lim h->0 [(a+h)²-h²]/a', 'lim x->a [x²-a]/(x-a)', 'lim h->a [(a+h)²-a²]/h'],
+    userAnswer: 'C',
+    correctAnswer: 'A',
+    wrongCount: 2,
+    reviewCount: 3,
+    lastWrongAt: '2026-07-03 19:35',
+    aiReview: '你知道要用极限，但把函数值差写成了 x²-a，缺少 f(a)=a²。复练时先写完整定义式再代入。',
+    knowledgePoints: ['导数定义', '极限变形', '函数值差'],
+  },
+  {
+    id: 'wrong-3',
+    title: '政治选择题混淆项',
+    packId: 'pack-politics',
+    pack: '政治核心考点背诵',
+    chapter: '马克思主义基本原理',
+    status: '待复盘',
+    reason: '把必要条件和充分条件混同',
+    stem: '关于实践和认识关系，下列说法最准确的是？',
+    options: ['认识决定实践', '实践是认识的来源', '认识只来自书本', '实践不检验认识'],
+    userAnswer: 'A',
+    correctAnswer: 'B',
+    wrongCount: 1,
+    reviewCount: 0,
+    lastWrongAt: '2026-07-02 08:20',
+    aiReview: '这类题要先抓住教材原句，再判断选项是否绝对化。A 项颠倒了实践和认识的基础关系。',
+    knowledgePoints: ['实践观点', '认识来源', '政治选择题'],
+  },
+]
+
+export const mockFlashcards = [
+  { id: 'card-1', front: '什么是学习包？', back: '围绕一个学习目标组织资料、章节、题目、卡片和复盘记录。', level: '熟悉' },
+  { id: 'card-2', front: 'AI 答疑应该带什么上下文？', back: '学习包、章节、知识点和用户当前问题。', level: '待复习' },
+]
+
+export const mockPosts = [
+  {
+    id: 'post-1',
+    type: '经验分享',
+    title: '如何把资料整理成可复习的学习包？',
+    author: '林同学',
+    replies: 18,
+    likes: 42,
+    createdAt: '20 分钟前',
+    tags: ['学习包', '资料整理'],
+    pack: '考研英语阅读精读',
+    excerpt: '我会先把讲义拖进学习包，再按章节生成问题，用错题本反推下一轮复习任务。',
+  },
+  {
+    id: 'post-2',
+    type: '错题求助',
+    title: '英语阅读错题复盘模板分享',
+    author: '小周',
+    replies: 9,
+    likes: 26,
+    createdAt: '1 小时前',
+    tags: ['错题本', '英语阅读'],
+    pack: '考研英语阅读精读',
+    excerpt: '主旨题总是被干扰项带跑，想请大家看看我这个错因记录方式有没有问题。',
+  },
+  {
+    id: 'post-3',
+    type: 'AI 回答求证',
+    title: 'AI 对导数定义的解释是否够严谨？',
+    author: '郭同学',
+    replies: 6,
+    likes: 13,
+    createdAt: '昨天',
+    tags: ['AI 求证', '高等数学'],
+    pack: '高等数学极限与导数',
+    excerpt: 'AI 建议先固定 a 再让 h 趋近 0，这句话对初学者好理解吗？',
+  },
+]
